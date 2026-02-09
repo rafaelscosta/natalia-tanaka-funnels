@@ -1,0 +1,45 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: natalia-funnels
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - easypanel
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/mpo/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=easypanel"
+
+      # HTTP Router
+      - "traefik.http.routers.natalia-funnels.rule=Host(`link.nataliatanaka.com.br`)"
+      - "traefik.http.routers.natalia-funnels.entrypoints=web"
+      - "traefik.http.routers.natalia-funnels.service=natalia-funnels"
+
+      # HTTPS Router
+      - "traefik.http.routers.natalia-funnels-tls.rule=Host(`link.nataliatanaka.com.br`)"
+      - "traefik.http.routers.natalia-funnels-tls.entrypoints=websecure"
+      - "traefik.http.routers.natalia-funnels-tls.tls=true"
+      - "traefik.http.routers.natalia-funnels-tls.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.natalia-funnels-tls.service=natalia-funnels"
+
+      # Service
+      - "traefik.http.services.natalia-funnels.loadbalancer.server.port=80"
+
+      # Security middleware
+      - "traefik.http.middlewares.natalia-funnels-security.headers.sslRedirect=true"
+      - "traefik.http.middlewares.natalia-funnels-security.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.natalia-funnels-security.headers.stsIncludeSubdomains=true"
+      - "traefik.http.routers.natalia-funnels-tls.middlewares=natalia-funnels-security"
+
+networks:
+  easypanel:
+    external: true
